@@ -1,0 +1,307 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user profile for an authenticated home buyer or seller.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name shown in listings and direct chats."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile was last updated."
+        }
+      },
+      "required": ["userId", "displayName", "createdAt", "updatedAt"]
+    },
+    "Property": {
+      "title": "Property",
+      "description": "A direct owner-listed home for sale without real estate intermediaries.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the property owner."
+        },
+        "ownerName": {
+          "type": "string",
+          "description": "Display name of the property owner."
+        },
+        "title": {
+          "type": "string",
+          "description": "Listing headline in Persian."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed property description."
+        },
+        "propertyType": {
+          "type": "string",
+          "enum": ["APARTMENT", "VILLA", "LAND"],
+          "description": "Property category."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ACTIVE", "SOLD"],
+          "description": "Listing availability status; SOLD is terminal."
+        },
+        "city": {
+          "type": "string",
+          "description": "City name."
+        },
+        "neighborhood": {
+          "type": "string",
+          "description": "Neighborhood or district name (no street PII)."
+        },
+        "priceToman": {
+          "type": "integer",
+          "description": "Total asking price in Toman."
+        },
+        "areaSqm": {
+          "type": "integer",
+          "description": "Floor area in square meters."
+        },
+        "bedrooms": {
+          "type": "integer",
+          "description": "Number of bedrooms."
+        },
+        "buildYear": {
+          "type": "integer",
+          "description": "Persian Solar Hijri build year."
+        },
+        "floor": {
+          "type": "integer",
+          "description": "Floor number."
+        },
+        "hasParking": {
+          "type": "boolean",
+          "description": "Whether dedicated parking is included."
+        },
+        "hasElevator": {
+          "type": "boolean",
+          "description": "Whether the building has an elevator."
+        },
+        "hasStorage": {
+          "type": "boolean",
+          "description": "Whether a storage unit is included."
+        },
+        "hasTitleDeed": {
+          "type": "boolean",
+          "description": "Whether an official single-sheet title deed is available."
+        },
+        "coverPreset": {
+          "type": "string",
+          "enum": ["HERO_HOME", "VILLA_NORTH", "INTERIOR_LIVING", "CUSTOM_PHOTO"],
+          "description": "Bundled visual preset or custom uploaded photo indicator."
+        },
+        "photoBase64": {
+          "type": "string",
+          "description": "Optional compressed JPEG base64 thumbnail selected via Android Photo Picker."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when listing was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when listing was last updated."
+        }
+      },
+      "required": [
+        "ownerId",
+        "ownerName",
+        "title",
+        "description",
+        "propertyType",
+        "status",
+        "city",
+        "neighborhood",
+        "priceToman",
+        "areaSqm",
+        "bedrooms",
+        "buildYear",
+        "floor",
+        "hasParking",
+        "hasElevator",
+        "hasStorage",
+        "hasTitleDeed",
+        "coverPreset",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Direct 1:1 buyer-seller chat thread for a specific property listing.",
+      "type": "object",
+      "properties": {
+        "propertyId": {
+          "type": "string",
+          "description": "Referenced property document ID."
+        },
+        "propertyTitle": {
+          "type": "string",
+          "description": "Denormalized property title."
+        },
+        "propertyCity": {
+          "type": "string",
+          "description": "Denormalized property city."
+        },
+        "propertyPriceToman": {
+          "type": "integer",
+          "description": "Denormalized property asking price."
+        },
+        "buyerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the buyer."
+        },
+        "buyerName": {
+          "type": "string",
+          "description": "Display name of the buyer."
+        },
+        "sellerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the seller."
+        },
+        "sellerName": {
+          "type": "string",
+          "description": "Display name of the seller."
+        },
+        "participantUids": {
+          "type": "array",
+          "description": "Two-element list containing buyerId and sellerId."
+        },
+        "lastMessage": {
+          "type": "string",
+          "description": "Preview of the most recent message."
+        },
+        "lastSenderId": {
+          "type": "string",
+          "description": "UID of the user who sent the latest message or opened the chat."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the conversation started."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the latest message."
+        }
+      },
+      "required": [
+        "propertyId",
+        "propertyTitle",
+        "propertyCity",
+        "propertyPriceToman",
+        "buyerId",
+        "buyerName",
+        "sellerId",
+        "sellerName",
+        "participantUids",
+        "lastMessage",
+        "lastSenderId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A direct message inside a buyer-seller conversation.",
+      "type": "object",
+      "properties": {
+        "conversationId": {
+          "type": "string",
+          "description": "Parent conversation document ID."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the message sender."
+        },
+        "senderName": {
+          "type": "string",
+          "description": "Display name of the sender."
+        },
+        "participantUids": {
+          "type": "array",
+          "description": "Denormalized two-element list of conversation participant UIDs."
+        },
+        "text": {
+          "type": "string",
+          "description": "Message body."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the message was sent."
+        }
+      },
+      "required": [
+        "conversationId",
+        "senderId",
+        "senderName",
+        "participantUids",
+        "text",
+        "createdAt"
+      ]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "A user's bookmarked property reference.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner user UID."
+        },
+        "propertyId": {
+          "type": "string",
+          "description": "Bookmarked property document ID."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when bookmarked."
+        }
+      },
+      "required": ["userId", "propertyId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile documents keyed by user UID."
+    },
+    "/users/{userId}/favorites/{propertyId}": {
+      "schema": { "$ref": "#/entities/Favorite" },
+      "description": "User-scoped saved property bookmarks."
+    },
+    "/properties/{propertyId}": {
+      "schema": { "$ref": "#/entities/Property" },
+      "description": "Direct owner-listed properties available for peer-to-peer purchase."
+    },
+    "/conversations/{conversationId}": {
+      "schema": { "$ref": "#/entities/Conversation" },
+      "description": "Direct 1:1 conversations between a buyer and a seller for a listing."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Messages belonging to a direct buyer-seller conversation."
+    }
+  }
+}

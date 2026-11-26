@@ -1,0 +1,257 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && isValidId(data.userId) &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidProperty(data) {
+      return data.ownerId is string && isValidId(data.ownerId) &&
+             data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 80 &&
+             data.title is string && data.title.size() >= 3 && data.title.size() <= 120 &&
+             data.description is string && data.description.size() <= 1500 &&
+             data.propertyType in ['APARTMENT', 'VILLA', 'LAND'] &&
+             data.status in ['ACTIVE', 'SOLD'] &&
+             data.city is string && data.city.size() >= 2 && data.city.size() <= 60 &&
+             data.neighborhood is string && data.neighborhood.size() >= 1 && data.neighborhood.size() <= 80 &&
+             data.priceToman is int && data.priceToman > 0 && data.priceToman <= 1000000000000 &&
+             data.areaSqm is int && data.areaSqm >= 10 && data.areaSqm <= 100000 &&
+             data.bedrooms is int && data.bedrooms >= 0 && data.bedrooms <= 20 &&
+             data.buildYear is int && data.buildYear >= 1300 && data.buildYear <= 1410 &&
+             data.floor is int && data.floor >= -2 && data.floor <= 60 &&
+             data.hasParking is bool &&
+             data.hasElevator is bool &&
+             data.hasStorage is bool &&
+             data.hasTitleDeed is bool &&
+             data.coverPreset in ['HERO_HOME', 'VILLA_NORTH', 'INTERIOR_LIVING', 'CUSTOM_PHOTO'] &&
+             (!('photoBase64' in data) || (data.photoBase64 is string && data.photoBase64.size() <= 180000)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidConversation(data) {
+      return data.propertyId is string && isValidId(data.propertyId) &&
+             data.propertyTitle is string && data.propertyTitle.size() >= 1 && data.propertyTitle.size() <= 120 &&
+             data.propertyCity is string && data.propertyCity.size() >= 1 && data.propertyCity.size() <= 60 &&
+             data.propertyPriceToman is int && data.propertyPriceToman > 0 &&
+             data.buyerId is string && isValidId(data.buyerId) &&
+             data.buyerName is string && data.buyerName.size() >= 1 && data.buyerName.size() <= 80 &&
+             data.sellerId is string && isValidId(data.sellerId) &&
+             data.sellerName is string && data.sellerName.size() >= 1 && data.sellerName.size() <= 80 &&
+             data.buyerId != data.sellerId &&
+             data.participantUids is list && data.participantUids.size() == 2 &&
+             data.participantUids[0] is string && data.participantUids[1] is string &&
+             data.participantUids.hasAll([data.buyerId, data.sellerId]) &&
+             data.lastMessage is string && data.lastMessage.size() <= 500 &&
+             data.lastSenderId is string && isValidId(data.lastSenderId) &&
+             data.lastSenderId in data.participantUids &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidMessage(data) {
+      return data.conversationId is string && isValidId(data.conversationId) &&
+             data.senderId is string && isValidId(data.senderId) &&
+             data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 80 &&
+             data.participantUids is list && data.participantUids.size() == 2 &&
+             data.participantUids[0] is string && data.participantUids[1] is string &&
+             data.senderId in data.participantUids &&
+             data.text is string && data.text.size() >= 1 && data.text.size() <= 1000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidFavorite(data) {
+      return data.userId is string && isValidId(data.userId) &&
+             data.propertyId is string && isValidId(data.propertyId) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // Private User Profiles & Favorites
+    match /users/{userId} {
+      allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'createdAt', 'updatedAt']);
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      match /favorites/{propertyId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(propertyId) &&
+                         request.auth.uid == userId &&
+                         isValidFavorite(incoming()) &&
+                         incoming().userId == userId &&
+                         incoming().propertyId == propertyId &&
+                         incoming().keys().hasAll(['userId', 'propertyId', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'propertyId', 'createdAt']) &&
+                         exists(/databases/$(database)/documents/properties/$(propertyId));
+
+        allow update: if false;
+
+        allow delete: if isSignedIn() && isValidId(propertyId) && request.auth.uid == userId;
+      }
+    }
+
+    // Direct Owner Property Listings
+    match /properties/{propertyId} {
+      allow get: if isSignedIn() &&
+                    isValidId(propertyId) &&
+                    (existing().status == 'ACTIVE' || existing().ownerId == request.auth.uid);
+
+      allow list: if isSignedIn() &&
+                     (existing().status == 'ACTIVE' || existing().ownerId == request.auth.uid);
+
+      allow create: if isSignedIn() &&
+                       isValidId(propertyId) &&
+                       isValidProperty(incoming()) &&
+                       incoming().ownerId == request.auth.uid &&
+                       incoming().status == 'ACTIVE' &&
+                       incoming().keys().hasAll([
+                         'ownerId', 'ownerName', 'title', 'description', 'propertyType',
+                         'status', 'city', 'neighborhood', 'priceToman', 'areaSqm',
+                         'bedrooms', 'buildYear', 'floor', 'hasParking', 'hasElevator',
+                         'hasStorage', 'hasTitleDeed', 'coverPreset', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'ownerId', 'ownerName', 'title', 'description', 'propertyType',
+                         'status', 'city', 'neighborhood', 'priceToman', 'areaSqm',
+                         'bedrooms', 'buildYear', 'floor', 'hasParking', 'hasElevator',
+                         'hasStorage', 'hasTitleDeed', 'coverPreset', 'photoBase64',
+                         'createdAt', 'updatedAt'
+                       ]);
+
+      allow update: if isSignedIn() &&
+                       isValidId(propertyId) &&
+                       isValidProperty(incoming()) &&
+                       existing().ownerId == request.auth.uid &&
+                       existing().status == 'ACTIVE' &&
+                       incoming().ownerId == existing().ownerId &&
+                       incoming().ownerName == existing().ownerName &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'title', 'description', 'propertyType', 'status', 'city',
+                         'neighborhood', 'priceToman', 'areaSqm', 'bedrooms', 'buildYear',
+                         'floor', 'hasParking', 'hasElevator', 'hasStorage', 'hasTitleDeed',
+                         'coverPreset', 'photoBase64', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() &&
+                       isValidId(propertyId) &&
+                       existing().ownerId == request.auth.uid;
+    }
+
+    // Direct Buyer-Seller Conversations
+    match /conversations/{conversationId} {
+      allow get: if isSignedIn() &&
+                    isValidId(conversationId) &&
+                    request.auth.uid in existing().participantUids;
+
+      allow list: if isSignedIn() &&
+                     request.auth.uid in existing().participantUids;
+
+      allow create: if isSignedIn() &&
+                       isValidId(conversationId) &&
+                       isValidConversation(incoming()) &&
+                       incoming().buyerId == request.auth.uid &&
+                       incoming().lastSenderId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'propertyId', 'propertyTitle', 'propertyCity', 'propertyPriceToman',
+                         'buyerId', 'buyerName', 'sellerId', 'sellerName', 'participantUids',
+                         'lastMessage', 'lastSenderId', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'propertyId', 'propertyTitle', 'propertyCity', 'propertyPriceToman',
+                         'buyerId', 'buyerName', 'sellerId', 'sellerName', 'participantUids',
+                         'lastMessage', 'lastSenderId', 'createdAt', 'updatedAt'
+                       ]) &&
+                       exists(/databases/$(database)/documents/properties/$(incoming().propertyId)) &&
+                       get(/databases/$(database)/documents/properties/$(incoming().propertyId)).data.ownerId == incoming().sellerId &&
+                       get(/databases/$(database)/documents/properties/$(incoming().propertyId)).data.status == 'ACTIVE';
+
+      allow update: if isSignedIn() &&
+                       isValidId(conversationId) &&
+                       isValidConversation(incoming()) &&
+                       request.auth.uid in existing().participantUids &&
+                       incoming().propertyId == existing().propertyId &&
+                       incoming().buyerId == existing().buyerId &&
+                       incoming().sellerId == existing().sellerId &&
+                       incoming().participantUids == existing().participantUids &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().lastSenderId == request.auth.uid &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'lastMessage', 'lastSenderId', 'updatedAt'
+                       ]);
+
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow get: if isSignedIn() &&
+                      isValidId(conversationId) &&
+                      isValidId(messageId) &&
+                      request.auth.uid in existing().participantUids;
+
+        allow list: if isSignedIn() &&
+                       request.auth.uid in existing().participantUids;
+
+        allow create: if isSignedIn() &&
+                         isValidId(conversationId) &&
+                         isValidId(messageId) &&
+                         isValidMessage(incoming()) &&
+                         incoming().conversationId == conversationId &&
+                         incoming().senderId == request.auth.uid &&
+                         request.auth.uid in incoming().participantUids &&
+                         incoming().keys().hasAll([
+                           'conversationId', 'senderId', 'senderName',
+                           'participantUids', 'text', 'createdAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'conversationId', 'senderId', 'senderName',
+                           'participantUids', 'text', 'createdAt'
+                         ]) &&
+                         exists(/databases/$(database)/documents/conversations/$(conversationId)) &&
+                         get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantUids == incoming().participantUids;
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}

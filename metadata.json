@@ -1,0 +1,6 @@
+{
+  "name": "بی‌واسطه",
+  "description": "پلتفرم آنلاین خرید و فروش مستقیم خانه بدون واسطه املاکی با گفتگوی مستقیم خریدار و فروشنده",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
